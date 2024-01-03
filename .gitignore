@@ -20,5 +20,8 @@
 # Go workspace file
 go.work
 
+# Env variables
+.env
+
 # Build output
 bin

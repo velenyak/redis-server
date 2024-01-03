@@ -6,12 +6,14 @@ import (
 )
 
 type Config struct {
-	Port string
+	Port int
+    Protocol string
 }
 
 func New() *Config {
 	return &Config{
-		Port: os.Getenv("PORT"),
+		Port: getEnvInt("PORT", 6379),
+        Protocol: getEnv("PROTOCOL", "tcp"),
 	}
 }
 
