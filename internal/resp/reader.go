@@ -11,14 +11,14 @@ type RespReader struct {
 	reader *bufio.Reader
 }
 
-type RespType int
+type RespType string
 
 const (
-	RESP_ERROR RespType = iota
-	RESP_STRING
-	RESP_INTEGER
-	RESP_ARRAY
-	RESP_BULK_STRING
+	RESP_ERROR       RespType = "-"
+	RESP_STRING      RespType = "+"
+	RESP_INTEGER     RespType = ":"
+	RESP_ARRAY       RespType = "*"
+	RESP_BULK_STRING RespType = "$"
 )
 
 type Resp struct {
@@ -27,11 +27,6 @@ type Resp struct {
 	intValue   int
 	ArrayValue []Resp
 }
-
-const (
-	ARRAY       = '*'
-	BULK_STRING = '$'
-)
 
 func New(reader *bufio.Reader) *RespReader {
 	return &RespReader{reader}
@@ -43,10 +38,10 @@ func (r *RespReader) Read() (Resp, error) {
 		return Resp{}, err
 	}
 	fmt.Println("To read prefix", string(prefix))
-	switch prefix {
-	case ARRAY:
+	switch string(prefix) {
+	case string(RESP_ARRAY):
 		return r.readArray()
-	case BULK_STRING:
+	case string(RESP_BULK_STRING):
 		return r.readBulkString()
 	default:
 		fmt.Println("TODO: implement other types", prefix)
@@ -125,8 +120,4 @@ func (r *RespReader) readBulkString() (Resp, error) {
 		ValueType: RESP_BULK_STRING,
 		StrValue:  bulkStr,
 	}, nil
-}
-
-func Write(value string) (string, error) {
-	return "+" + value + "\r\n", nil
 }

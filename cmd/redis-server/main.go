@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/velenyak/redis-server/config"
+	"github.com/velenyak/redis-server/internal/handler"
 	"github.com/velenyak/redis-server/internal/resp"
 )
 
@@ -27,16 +28,21 @@ func main() {
 	}
 
 	for {
-		currentResp := resp.New(bufio.NewReader(conn))
-		line, err := currentResp.Read()
+		respReader := resp.New(bufio.NewReader(conn))
+		line, err := respReader.Read()
 		if err != nil {
 			fmt.Println("Error reading request", err.Error())
 			panic(err)
 		}
 		fmt.Println("Request recieved", line)
-		response, err := resp.Write("PONG")
+		result, err := handler.HandleResp(line)
 		if err != nil {
-			fmt.Println("Error marshalling response", err.Error())
+			fmt.Println("Error handling request", err.Error())
+			panic(err)
+		}
+		response, err := resp.Write(result)
+		if err != nil {
+			fmt.Println("Error writing response", err.Error())
 			panic(err)
 		}
 		conn.Write([]byte(response))
