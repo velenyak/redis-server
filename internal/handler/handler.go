@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/velenyak/redis-server/internal/resp"
+	"github.com/velenyak/redis-server/internal/storage"
 )
 
 func HandleResp(input resp.Resp) (resp.Resp, error) {
@@ -48,16 +49,20 @@ func ping(args []resp.Resp) resp.Resp {
 }
 
 func set(args []resp.Resp) resp.Resp {
+	storage.Set(args[0].StrValue, args[1].StrValue)
+
 	return resp.Resp{
-		ValueType: resp.RESP_ERROR,
-		StrValue:  "Not implemented",
+		ValueType: resp.RESP_STRING,
+		StrValue:  "OK",
 	}
 }
 
 func get(args []resp.Resp) resp.Resp {
+	value, _ := storage.Get(args[0].StrValue)
+
 	return resp.Resp{
-		ValueType: resp.RESP_ERROR,
-		StrValue:  "Not implemented",
+		ValueType: resp.RESP_STRING,
+		StrValue:  value,
 	}
 }
 
