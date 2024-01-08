@@ -5,11 +5,27 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
+)
+
+type RespReader struct {
+	reader *bufio.Reader
+}
+
+type RespType int
+
+const (
+	RESP_ERROR RespType = iota
+	RESP_STRING
+	RESP_INTEGER
+	RESP_ARRAY
+	RESP_BULK_STRING
 )
 
 type Resp struct {
-	reader *bufio.Reader
+	ValueType  RespType
+	StrValue   string
+	intValue   int
+	ArrayValue []Resp
 }
 
 const (
@@ -17,14 +33,14 @@ const (
 	BULK_STRING = '$'
 )
 
-func New(reader *bufio.Reader) *Resp {
-	return &Resp{reader}
+func New(reader *bufio.Reader) *RespReader {
+	return &RespReader{reader}
 }
 
-func (r *Resp) Read() (string, error) {
+func (r *RespReader) Read() (Resp, error) {
 	prefix, err := r.reader.ReadByte()
 	if err != nil {
-		return "", err
+		return Resp{}, err
 	}
 	fmt.Println("To read prefix", string(prefix))
 	switch prefix {
@@ -34,11 +50,11 @@ func (r *Resp) Read() (string, error) {
 		return r.readBulkString()
 	default:
 		fmt.Println("TODO: implement other types", prefix)
-		return "", errors.New("TODO: implement other types")
+		return Resp{}, errors.New("TODO: implement other types")
 	}
 }
 
-func (r *Resp) readLine() (string, error) {
+func (r *RespReader) readLine() (string, error) {
 	line, isPrefix, err := r.reader.ReadLine()
 	fmt.Println("To read line", string(line), isPrefix, err)
 	if isPrefix {
@@ -57,7 +73,7 @@ func (r *Resp) readLine() (string, error) {
 	return string(line), nil
 }
 
-func (r *Resp) readInt() (int, error) {
+func (r *RespReader) readInt() (int, error) {
 	numStr, err := r.reader.ReadByte()
 	if err != nil {
 		return 0, err
@@ -69,28 +85,31 @@ func (r *Resp) readInt() (int, error) {
 	return num, nil
 }
 
-func (r *Resp) readArray() (string, error) {
+func (r *RespReader) readArray() (Resp, error) {
+	resp := Resp{
+		ValueType: RESP_ARRAY,
+	}
 	len, err := r.readInt()
 	if err != nil {
-		return "", err
+		return Resp{}, err
 	}
 	fmt.Println("To read array len", len)
 	r.reader.ReadLine()
-	var fullArray []string
+	resp.ArrayValue = make([]Resp, len)
 	for i := 0; i < len; i++ {
 		line, err := r.Read()
 		if err != nil {
-			return strings.Join(fullArray, ", "), err
+			return Resp{}, err
 		}
-		fullArray = append(fullArray, line)
+		resp.ArrayValue[i] = line
 	}
-	return strings.Join(fullArray, ", "), nil
+	return resp, nil
 }
 
-func (r *Resp) readBulkString() (string, error) {
+func (r *RespReader) readBulkString() (Resp, error) {
 	len, err := r.readInt()
 	if err != nil {
-		return "", err
+		return Resp{}, err
 	}
 	fmt.Println("To read bulk string len", len)
 	r.reader.ReadLine()
@@ -98,11 +117,14 @@ func (r *Resp) readBulkString() (string, error) {
 	r.reader.Read(bulk)
 	_, err = r.readLine()
 	if err != nil {
-		return "", err
+		return Resp{}, err
 	}
 	bulkStr := string(bulk)
 	fmt.Println("Bulk string", bulkStr)
-	return bulkStr, nil
+	return Resp{
+		ValueType: RESP_BULK_STRING,
+		StrValue:  bulkStr,
+	}, nil
 }
 
 func Write(value string) (string, error) {
