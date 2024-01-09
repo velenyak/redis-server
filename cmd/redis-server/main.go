@@ -45,6 +45,7 @@ func main() {
 			fmt.Println("Error writing response", err.Error())
 			panic(err)
 		}
+		fmt.Println("Sending response", response)
 		conn.Write([]byte(response))
 	}
 }
